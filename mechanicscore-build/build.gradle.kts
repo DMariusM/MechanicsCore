@@ -6,6 +6,18 @@ plugins {
     id("xyz.jpenilla.resource-factory-paper-convention") version "1.3.1"
 }
 
+// Targeting Java 25 to consume both the legacy Java 21 modules (v1_21_R*)
+// and the new Java 25 modules (v26_1_R1+).
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+}
+
+tasks.withType<JavaCompile>().configureEach {
+    options.release.set(25)
+}
+
 dependencies {
     // Main project code
     implementation(project(":mechanicscore-core"))

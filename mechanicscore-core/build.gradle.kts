@@ -34,6 +34,7 @@ dependencies {
     testImplementation(libs.junitApi)
     testImplementation(libs.junitParams)
     testRuntimeOnly(libs.junitEngine)
+    testRuntimeOnly(libs.junitLauncher)
 }
 
 val sourcesJar by tasks.registering(Jar::class) {

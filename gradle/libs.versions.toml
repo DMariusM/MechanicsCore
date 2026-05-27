@@ -19,11 +19,11 @@ annotations = "26.0.2"
 bstats = "3.1.0"
 commandApi = "11.1.0"
 fastUtil = "8.5.15"
-foliaScheduler = "0.7.5"
+foliaScheduler = "0.8.0"
 gson = "2.13.1"
 hikariCp = "5.1.0"
 jsonSimple = "1.1.1"
-kotlin = "1.9.23"
+kotlin = "2.3.21"
 xSeries = "13.6.0"
 
 # Testing dependencies
@@ -61,6 +61,7 @@ kotlinStdlib             = { module = "org.jetbrains.kotlin:kotlin-stdlib", vers
 xSeries                  = { module = "com.github.cryptomorin:XSeries", version.ref = "xSeries" }
 
 # Testing dependencies
-junitApi    = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
-junitParams = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
-junitEngine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+junitApi      = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
+junitParams   = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+junitEngine   = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+junitLauncher = { module = "org.junit.platform:junit-platform-launcher" }
