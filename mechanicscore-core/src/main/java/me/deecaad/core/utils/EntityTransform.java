@@ -1,7 +1,6 @@
 package me.deecaad.core.utils;
 
 import com.cjcrafter.foliascheduler.ServerImplementation;
-import com.cjcrafter.foliascheduler.util.MinecraftVersions;
 import me.deecaad.core.MechanicsCore;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
@@ -9,35 +8,60 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.util.EulerAngle;
 import org.bukkit.util.Vector;
+import org.joml.Quaterniond;
+import org.joml.Vector3d;
 
 /**
- * Wraps a bukkit {@link Entity} to use {@link Transform} methods easily. Entity transforms cannot
- * have parents, but they can have children. Not very performance friendly when having many
- * children, since the quaternions are not cached every tick.
- * <p>
- * TODO add cache to deal with potential performance problems
+ * Wraps a bukkit {@link Entity} as a {@link Transform}. Entity transforms cannot have a parent, but
+ * they can have children. This transform tries to follow the attached entity as close as possible.
  */
 public class EntityTransform extends Transform {
 
     private final Entity entity;
 
+    private Vector cachedPosition;
+    private Quaterniond cachedRotation;
+    private double lastX, lastY, lastZ;
+    private float lastYaw, lastPitch;
+
     public EntityTransform(Entity entity) {
         this.entity = entity;
+        refresh();
+    }
+
+    private boolean refresh() {
+        Location loc = entity.getLocation();
+        boolean changed = loc.getX() != lastX || loc.getY() != lastY || loc.getZ() != lastZ
+            || loc.getYaw() != lastYaw || loc.getPitch() != lastPitch;
+        lastX = loc.getX();
+        lastY = loc.getY();
+        lastZ = loc.getZ();
+        lastYaw = loc.getYaw();
+        lastPitch = loc.getPitch();
+        cachedPosition = loc.toVector();
+        cachedRotation = Transform.fromYawPitch(loc.getYaw(), loc.getPitch());
+        return changed;
     }
 
     @Override
-    public Transform getParent() {
+    public void update() {
+        if (refresh())
+            propagate();
+    }
+
+    @Override
+    public TransformLike getParent() {
         return null; // cannot have a parent
     }
 
     @Override
-    public void setParent(Transform parent) {
+    public void setParent(TransformLike parent) {
         throw new IllegalArgumentException("EntityTransform cannot have parent");
     }
 
     @Override
     public Vector getLocalPosition() {
-        return entity.getLocation().toVector();
+        return cachedPosition.clone();
     }
 
     @Override
@@ -47,35 +71,30 @@ public class EntityTransform extends Transform {
     }
 
     @Override
-    public Quaternion getLocalRotation() {
-        Vector view = entity.getLocation().getDirection();
-        Vector localUp = Quaternion.UP;
-        if (localUp.equals(view))
-            localUp = Quaternion.BACKWARD; // TODO improve
-
-        return Quaternion.lookAt(entity.getLocation().getDirection(), localUp);
+    public Quaterniond getLocalRotation() {
+        return new Quaterniond(cachedRotation);
     }
 
     @Override
-    public void setLocalRotation(Quaternion localRotation) {
-        Vector euler = localRotation.getEulerAngles();
+    public void setLocalRotation(Quaterniond localRotation) {
+        // Boundary translation: decompose the standard right-handed rotation into Minecraft's
+        // yaw/pitch. Minecraft yaw increases clockwise (viewed from above), which is the opposite
+        // of a standard +Y rotation, so the yaw component must be negated.
+        Vector3d euler = localRotation.getEulerAnglesYXZ(new Vector3d());
         if (entity.getType() == EntityType.ARMOR_STAND) {
             ArmorStand stand = (ArmorStand) entity;
-            stand.setHeadPose(new EulerAngle(euler.getX(), euler.getY(), euler.getZ()));
-        } else if (MinecraftVersions.UPDATE_AQUATIC.isAtLeast()) {
-            entity.setRotation((float) euler.getX(), (float) euler.getY());
+            stand.setHeadPose(new EulerAngle(euler.x, euler.y, euler.z));
         } else {
-            Location loc = entity.getLocation();
-            loc.setYaw((float) euler.getX());
-            loc.setPitch((float) euler.getY());
-            entity.teleport(loc); // This call to legacy teleport is fine, since it is 1.12
+            float yaw = (float) Math.toDegrees(-euler.y);
+            float pitch = (float) Math.toDegrees(euler.x);
+            entity.setRotation(yaw, pitch);
         }
     }
 
     @Override
-    public void applyRotation(Quaternion rotation) {
-        Quaternion local = getLocalRotation();
-        local.multiply(rotation);
+    public void applyRotation(Quaterniond rotation) {
+        Quaterniond local = getLocalRotation();
+        local.mul(rotation);
         setLocalRotation(local);
     }
 }
