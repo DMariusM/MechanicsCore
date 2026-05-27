@@ -28,12 +28,14 @@ dependencies {
     implementation(libs.xSeries)
 
     // Testing dependencies
+    testImplementation(platform(libs.junitBom))
     testImplementation(libs.paper)
     testImplementation(libs.annotations)
     testImplementation(libs.foliaScheduler)
     testImplementation(libs.junitApi)
     testImplementation(libs.junitParams)
     testRuntimeOnly(libs.junitEngine)
+    testRuntimeOnly(libs.junitPlatformLauncher)
 }
 
 val sourcesJar by tasks.registering(Jar::class) {
