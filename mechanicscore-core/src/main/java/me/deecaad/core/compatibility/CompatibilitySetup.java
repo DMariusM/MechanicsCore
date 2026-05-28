@@ -27,12 +27,16 @@ public class CompatibilitySetup {
      */
     @Nullable public <T> T getCompatibleVersion(Class<T> interfaceClazz, String directory) {
         String version = getVersionAsString();
+        Class<?> compatibilityClass;
         try {
-            Class<?> compatibilityClass = Class.forName(directory + "." + version, false, interfaceClazz.getClassLoader());
+            compatibilityClass = Class.forName(directory + "." + version, false, interfaceClazz.getClassLoader());
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
+        try {
             return interfaceClazz.cast(compatibilityClass.getConstructor().newInstance());
         } catch (ReflectiveOperationException e) {
-            // Do nothing
+            throw new RuntimeException("Found compatibility class " + compatibilityClass.getName() + " but failed to instantiate it", e);
         }
-        return null;
     }
 }

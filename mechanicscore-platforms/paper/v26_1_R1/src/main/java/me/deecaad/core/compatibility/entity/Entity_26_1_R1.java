@@ -3,6 +3,7 @@ package me.deecaad.core.compatibility.entity;
 import com.cjcrafter.foliascheduler.util.FieldAccessor;
 import com.cjcrafter.foliascheduler.util.ReflectionUtil;
 import com.mojang.datafixers.util.Pair;
+import net.minecraft.core.Holder;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.protocol.game.ClientboundSetEntityDataPacket;
 import net.minecraft.network.protocol.game.ClientboundSetEquipmentPacket;
@@ -39,12 +40,9 @@ public class Entity_26_1_R1 implements EntityCompatibility {
     private static final FieldAccessor inventoryEquipmentField;
 
     static {
-        Class<?> playerInventoryClass = ReflectionUtil.getMinecraftClass("world.entity.player", "PlayerInventory");
-        Class<?> nonNullListClass = ReflectionUtil.getMinecraftClass("core", "NonNullList");
-
-        itemsField = ReflectionUtil.getField(playerInventoryClass, nonNullListClass);
+        itemsField = ReflectionUtil.getField(Inventory.class, NonNullList.class);
         entityEquipmentField = ReflectionUtil.getField(LivingEntity.class, EntityEquipment.class);
-        inventoryEquipmentField = ReflectionUtil.getField(playerInventoryClass, EntityEquipment.class);
+        inventoryEquipmentField = ReflectionUtil.getField(Inventory.class, EntityEquipment.class);
     }
 
     @Override
@@ -140,7 +138,7 @@ public class Entity_26_1_R1 implements EntityCompatibility {
 
     private static class NonNullListProxy extends NonNullList<net.minecraft.world.item.ItemStack> {
 
-        private static final FieldAccessor itemField = ReflectionUtil.getField(net.minecraft.world.item.ItemStack.class, Item.class);
+        private static final FieldAccessor itemField = ReflectionUtil.getField(net.minecraft.world.item.ItemStack.class, Holder.class);
 
         private final Inventory inventory;
         private final EquipmentChangeConsumer consumer;
