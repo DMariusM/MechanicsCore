@@ -201,7 +201,7 @@ public class FakeEntity_1_21_R2 extends FakeEntity {
             ? new ClientboundAddEntityPacket(entity, serverEntity)
             : new ClientboundAddEntityPacket(entity, serverEntity, type == EntityType.FALLING_BLOCK ? Block.getId(block) : 0);
 
-        ClientboundSetEntityDataPacket meta = new ClientboundSetEntityDataPacket(cache, getEntityData(entity.getEntityData(), false));
+        ClientboundSetEntityDataPacket meta = new ClientboundSetEntityDataPacket(cache, getEntityData(entity.getEntityData(), true));
         ClientboundRotateHeadPacket head = new ClientboundRotateHeadPacket(entity, convertYaw(getYaw()));
         Rot look = new Rot(cache, convertYaw(getYaw()), convertPitch(getPitch()), false);
         ClientboundSetEntityMotionPacket velocity = new ClientboundSetEntityMotionPacket(cache, new Vec3(motion.getX(), motion.getY(), motion.getZ()));
