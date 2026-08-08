@@ -12,6 +12,7 @@ import me.deecaad.core.mechanics.targeters.Targeter;
 import me.deecaad.core.utils.RandomUtil;
 import org.bukkit.Location;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -77,9 +78,20 @@ public abstract class Mechanic implements InlineSerializer<Mechanic> {
         if (!RandomUtil.chance(chance))
             return;
 
+        // Stateful conditions must capture the targeted entities now, before a delay or repeat can
+        // change their state. Stateless mechanics keep the old re-target-on-each-repeat behavior.
+        boolean requiresPriming = conditions.stream().anyMatch(Condition::requiresPriming);
+        List<CastData> primedTargets = requiresPriming ? prepareTargets(cast.clone()) : null;
+
+        if (requiresPriming && primedTargets.isEmpty())
+            return;
+
         // If there is no need to schedule event, skip the event process.
         if (repeatAmount == 1 && repeatInterval == 1 && delayBeforePlay == 0) {
-            handleTargetersAndConditions(cast.clone()); // clone since targeters modify the cast
+            if (requiresPriming)
+                handlePreparedTargets(primedTargets);
+            else
+                handleTargetersAndConditions(cast.clone()); // clone since targeters modify the cast
             return;
         }
 
@@ -100,7 +112,10 @@ public abstract class Mechanic implements InlineSerializer<Mechanic> {
                     return;
                 }
 
-                handleTargetersAndConditions(cast.clone()); // clone since targeters modify the cast
+                if (requiresPriming)
+                    handlePreparedTargets(primedTargets);
+                else
+                    handleTargetersAndConditions(cast.clone()); // clone since targeters modify the cast
             }
         }, Math.max(delayBeforePlay, 1), Math.max(repeatInterval, 1));
 
@@ -120,6 +135,60 @@ public abstract class Mechanic implements InlineSerializer<Mechanic> {
 
             use0(target);
         }
+    }
+
+    /**
+     * Resolves each target exactly once and primes all conditions against a detached copy of that
+     * target. Multi-target targeters reuse one mutable {@link CastData}, so each result must be copied
+     * before the iterator advances.
+     *
+     * @param cast The non-null cast to target.
+     * @return The prepared target list.
+     */
+    protected List<CastData> prepareTargets(CastData cast) {
+        List<CastData> prepared = new ArrayList<>();
+        Iterator<CastData> targets = targeter.getTargets(cast);
+
+        while (targets.hasNext()) {
+            CastData target = copyCast(targets.next());
+            for (Condition condition : conditions)
+                condition.prime(target);
+            prepared.add(target);
+        }
+
+        return prepared;
+    }
+
+    /**
+     * Evaluates and executes targets previously captured by {@link #prepareTargets(CastData)}.
+     */
+    protected void handlePreparedTargets(List<CastData> preparedTargets) {
+        OUTER : for (CastData prepared : preparedTargets) {
+            CastData target = copyCast(prepared);
+            for (Condition condition : conditions)
+                if (!condition.isAllowed(target))
+                    continue OUTER;
+
+            use0(target);
+        }
+    }
+
+    /**
+     * Makes a detached copy of cast data. {@link CastData#clone()} intentionally shares temporary
+     * placeholders, but prepared multi-target casts need independent maps so later targeter results
+     * cannot overwrite earlier target placeholders or condition snapshots.
+     */
+    private CastData copyCast(CastData cast) {
+        CastData copy = new CastData(cast.getSource(), cast.itemTitle(), cast.item(), cast.getTaskIdConsumer());
+        copy.placeholders().clear();
+        copy.placeholders().putAll(cast.placeholders());
+
+        if (cast.getTarget() != null)
+            copy.setTargetEntity(cast.getTarget());
+        if (cast.hasTargetLocation())
+            copy.setTargetLocation(cast.getTargetLocationSupplier());
+
+        return copy;
     }
 
     /**

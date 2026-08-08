@@ -60,9 +60,11 @@ public final class PlayerEffectMechanicList extends Mechanic {
 
             OUTER : for (Iterator<CastData> it = mechanic.targeter.getTargets(cast); it.hasNext();) {
                 CastData target = it.next();
-                for (Condition condition : mechanic.conditions)
+                for (Condition condition : mechanic.conditions) {
+                    condition.prime(target);
                     if (!condition.isAllowed(target))
                         continue OUTER;
+                }
 
                 // Save these variables so they don't get overridden
                 LivingEntity targetEntity = target.getTarget();
@@ -70,9 +72,11 @@ public final class PlayerEffectMechanicList extends Mechanic {
 
                 PLAYER_LOOP : for (Player player : players) {
                     target.setTargetEntity(player);
-                    for (Condition condition : mechanic.getViewerConditions())
+                    for (Condition condition : mechanic.getViewerConditions()) {
+                        condition.prime(target);
                         if (!condition.isAllowed(target))
                             continue PLAYER_LOOP;
+                    }
 
                     cacheList.add(player);
                 }

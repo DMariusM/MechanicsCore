@@ -15,6 +15,26 @@ public abstract class Condition implements InlineSerializer<Condition> {
 
     private boolean isInverted;
 
+    /**
+     * Returns whether this condition needs to capture state when a mechanic is first cast. Stateful
+     * conditions use this to compare the original state with the state observed after a delay or on a
+     * later repeat. The default implementation is stateless.
+     *
+     * @return true when {@link #prime(CastData)} must run before delayed execution.
+     */
+    public boolean requiresPriming() {
+        return false;
+    }
+
+    /**
+     * Captures any state needed by this condition before a mechanic is delayed or repeated. Data may
+     * be stored in {@link CastData#placeholders()}, which is retained by the mechanic lifecycle.
+     *
+     * @param cast The non-null targeted cast data.
+     */
+    public void prime(CastData cast) {
+    }
+
     @Nullable @Override
     public String getWikiLink() {
         return "https://cjcrafter.gitbook.io/mechanics/#conditions";
