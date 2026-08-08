@@ -301,14 +301,30 @@ public class FileReader {
      * @return the map with used path to serializers and validators
      */
     public Configuration usePathToSerializersAndValidators(Configuration filledMap) {
+        return usePathToSerializersAndValidators(filledMap, filledMap);
+    }
+
+    /**
+     * Resolves deferred serializers and validators while allowing references to be looked up from a
+     * different configuration than the one receiving the serialized values.
+     *
+     * @param filledMap The configuration receiving resolved values.
+     * @param pathToConfig The configuration containing path-to targets.
+     * @return {@code filledMap}, after deferred serialization and validation.
+     */
+    public Configuration usePathToSerializersAndValidators(Configuration filledMap, Configuration pathToConfig) {
 
         // Handle nested-path-to serializers
         for (NestedPathToSerializer nestedPathTo : nestedPathToSerializers) {
             try {
                 SerializeData data = new SerializeData(nestedPathTo.ex.getSerializeData().getFile(), nestedPathTo.path, nestedPathTo.ex.getSerializeData().getConfig());
-                data.setPathToConfig(filledMap);
-                Object serialized = data.of().serialize(nestedPathTo.serializer);
-                filledMap.set(nestedPathTo.path, serialized);
+                data.setPathToConfig(pathToConfig);
+                Optional<?> serialized = data.of().serialize(nestedPathTo.serializer);
+                if (serialized.isEmpty()) {
+                    debug.severe("Failed to resolve nested path-to serializer at " + nestedPathTo.path + ".");
+                    continue;
+                }
+                filledMap.set(nestedPathTo.path, serialized.get());
             } catch (SerializerException ex) {
                 ex.log(debug);
             }
@@ -316,14 +332,14 @@ public class FileReader {
 
         // Handle path-to serializers
         for (PathToSerializer pathToSerializer : pathToSerializers) {
-            pathToSerializer.serializer.tryPathTo(filledMap, pathToSerializer.pathWhereToStore, pathToSerializer.pathTo);
+            pathToSerializer.serializer.tryPathTo(filledMap, pathToConfig, pathToSerializer.pathWhereToStore, pathToSerializer.pathTo);
         }
 
         // Handle validators
         for (ValidatorData validatorData : validatorDatas) {
 
             SerializeData data = new SerializeData(validatorData.file, validatorData.path, new BukkitConfig(validatorData.configurationSection));
-            data.setPathToConfig(filledMap);
+            data.setPathToConfig(pathToConfig);
 
             if (!validatorData.validator.shouldValidate(data)) {
                 debug.fine("Skipping " + validatorData.path + " due to skip");

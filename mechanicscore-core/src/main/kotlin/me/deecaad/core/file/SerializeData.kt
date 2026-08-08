@@ -75,6 +75,7 @@ class SerializeData {
     }
 
     private fun copyMutables(from: SerializeData): SerializeData {
+        this.pathToConfig = from.pathToConfig
         this.usingStep = from.usingStep
         return this
     }
@@ -205,6 +206,17 @@ class SerializeData {
     }
 
     /**
+     * Returns the original value stored at the given relative path.
+     * FastConfiguration stores primitive values separately from objects.
+     */
+    private fun getValue(relative: String?): Any? {
+        val path = getPath(relative) ?: return null
+        if (!usingStep) return config[path]
+
+        return pathToConfig!!.entries().firstOrNull { it.key == path }?.value
+    }
+
+    /**
      * When there is no method in [ConfigAccessor] to match a specific configuration error, you
      * may check for it manually and use this method to throw a "general" exception.
      *
@@ -305,7 +317,7 @@ class SerializeData {
 
             // The first step is to assert that the value stored at this key
             // is a list (of any generic-type).
-            val value = if (usingStep) pathToConfig!!.getObject(getPath(relative)!!) else config[getPath(relative)]
+            val value = getValue(relative)
             if (value == null) return listOf()
 
             if (value !is List<*>) {
@@ -442,7 +454,7 @@ class SerializeData {
          */
         fun `is`(type: Class<*>): Boolean {
             require(!type.isPrimitive) { "Silly developer, $type is a primitive type! Check wrapper classes instead." }
-            val value = if (usingStep) pathToConfig!!.getObject(getPath(relative)!!) else config[getPath(relative)]
+            val value = getValue(relative)
 
             return value != null && type.isAssignableFrom(value.javaClass)
         }
@@ -457,7 +469,7 @@ class SerializeData {
          */
         @Throws(SerializerException::class)
         fun assertType(type: Class<*>): ConfigAccessor {
-            val value = if (usingStep) pathToConfig!!.getObject(getPath(relative)!!) else config[getPath(relative)]
+            val value = getValue(relative)
 
             // Use assertExists for required keys
             if (value != null) {
@@ -482,7 +494,7 @@ class SerializeData {
          */
         @Throws(SerializerException::class)
         fun getNumber(): Optional<Number> {
-            var value = if (usingStep) pathToConfig!!.getObject(getPath(relative)!!) else config[getPath(relative)]
+            var value = getValue(relative)
 
             // Use assertExists for required keys
             if (value == null) {
@@ -554,7 +566,7 @@ class SerializeData {
          */
         @Throws(SerializerException::class)
         fun getBool(): Optional<Boolean> {
-            val value = if (usingStep) pathToConfig!!.getObject(getPath(relative)!!) else config[getPath(relative)]
+            val value = getValue(relative)
             if (value == null) {
                 return Optional.empty()
             }
@@ -1123,7 +1135,7 @@ class SerializeData {
                     pathToConfig!!.getObject(
                         getPath(relative)!!,
                         String::class.java,
-                    ) == null
+                    ) != null
                 } else {
                     config.isString(getPath(relative))
                 }

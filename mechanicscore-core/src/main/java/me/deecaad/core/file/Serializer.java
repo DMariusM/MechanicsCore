@@ -82,7 +82,21 @@ public interface Serializer<T> {
      * @param pathTo the path where to try to find object from filledMap
      */
     default void tryPathTo(Configuration filledMap, String pathWhereToStore, String pathTo) {
-        Object obj = filledMap.getObject(pathTo);
+        tryPathTo(filledMap, filledMap, pathWhereToStore, pathTo);
+    }
+
+    /**
+     * Resolves a path-to reference from one configuration and stores the resolved object in another.
+     * This overload is useful when an addon is serializing its own configuration while referencing
+     * templates that were serialized by a different plugin.
+     *
+     * @param filledMap The configuration receiving the resolved object.
+     * @param pathToConfig The configuration containing the referenced object.
+     * @param pathWhereToStore The destination path in {@code filledMap}.
+     * @param pathTo The lookup path in {@code pathToConfig}.
+     */
+    default void tryPathTo(Configuration filledMap, Configuration pathToConfig, String pathWhereToStore, String pathTo) {
+        Object obj = pathToConfig.getObject(pathTo);
         if (!this.getClass().isInstance(obj)) {
             String[] splittedWhereToStore = pathWhereToStore.split("\\.");
             MechanicsCore.getInstance().getDebugger().severe("Tried to use path to, but didn't find correct object.",
